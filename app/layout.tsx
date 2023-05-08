@@ -1,3 +1,4 @@
+import Sidebar from './components/sidebar'
 import './globals.css'
 
 export const metadata = {
@@ -13,7 +14,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head />
-      <body>{children}
+      <body>
+        {children}     
       </body>
     </html>
   )
