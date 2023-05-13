@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, Stack, Typography} from "@mui/material"
 const UserCards = (props: any) => {
     const {sx, text, value} = props
     return (
-        <Card sx={{sx, bgcolor: "#38bdf8"}} elevation={5} > 
+        <Card sx={{sx, bgcolor: "#3b82f6"}} elevation={5} > 
             <CardContent>
                 <Stack
                     alignItems="flex-center"

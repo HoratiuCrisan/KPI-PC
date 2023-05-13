@@ -12,13 +12,13 @@ const options = {
   },
   yaxis: {
     title: {
-      text: 'Tasks'
+      text: 'Users'
     }
   }
 };
 
 const series = [{
-  name: 'Tasks',
+  name: 'Users',
   data: [30, 40, 35, 50, 49, 60, 70, 91, 125, 100, 80, 60]
 }];
 

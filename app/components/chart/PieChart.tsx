@@ -23,7 +23,7 @@ export const PieChart = (props : any) => {
         <Card sx={sx} elevation={5} >
             <CardContent >
                 <Chart options={options} series={series} type="pie" height={300} width={"100%"}/>
-                <Typography variant="h6" align='center'>Teams</Typography>
+                <Typography variant="h6" align='center'>Tasks / Team </Typography>
             </CardContent>
         </Card>
       )

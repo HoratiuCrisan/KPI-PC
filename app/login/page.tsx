@@ -29,11 +29,11 @@ const Login = () => {
        <div className={`${styles.bgColor} h-screen py-40 `}>
         <div className="container mx-auto w-full">
             <div className="flex flex-col lg:flex-row w-5/6 bg-white rounded-xl mx-auto shadow-lg overflow-hidden">
-                <div className={`${dosis.className} hidden lg:block w-full lg:w-1/2 flex flex-col bg-blue-600 p-12 bg-no-repeat bg-cover bg-center`}>
+                <div className={` hidden lg:block w-full lg:w-1/2 flex flex-col bg-blue-600 p-12 bg-no-repeat bg-cover bg-center`}>
                     <h1 className="text-white text-3xl font-bold">Welcome Back</h1>
                     <div>
                         <p className="text-gray-100 text-lg py-5 ml-3 font-semibold">To keep connected with us please login with your personal information</p>
-                        <Image src={LoginImage} alt="login page image" />
+                        <Image src={LoginImage} alt="login page image w-auto h-auto" />
                     </div>
                 </div>
                 <div className="w-full lg:w-1/2 py-16 px-12 bg-gray-50">
