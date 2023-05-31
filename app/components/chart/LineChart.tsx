@@ -1,34 +1,59 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import {Chart} from './ApexCharts'
-import {Card, CardContent} from '@mui/material'
+import { Card, CardContent } from '@mui/material';
+
+// Import the type declaration for Chart component
+import { Chart } from './ApexCharts';
 
 const options = {
   chart: {
-    id: 'basic-area-chart'
+    id: 'basic-area-chart',
   },
   xaxis: {
-    categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   },
   yaxis: {
     title: {
-      text: 'Users'
-    }
-  }
+      text: 'Users',
+    },
+  },
 };
+interface AreaChartProps {
+  sx: React.CSSProperties; // Define the type for the 'sx' prop
+}
 
-const series = [{
-  name: 'Users',
-  data: [30, 40, 35, 50, 49, 60, 70, 91, 125, 100, 80, 60]
-}];
+export const AreaChart: React.FC<AreaChartProps> = ({ sx }) => {
+  const [series, setSeries] = useState([{ name: 'Users', data: [] }]);
+  const [loading, setLoading] = useState(true);
 
-export const AreaChart = (props: any) => {
-    const sx = props
-    return (
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/components-linechart');
+        if (!response.ok) {
+          throw new Error('Failed to fetch chart data');
+        }
+        const data = await response.json();
+        setSeries([{ name: 'Users', data: data.data }]);
+        setLoading(false);
+      } catch (error) {
+        console.error('An error occurred:', error);
+        setLoading(false);
+      }
+    };
+    
+
+    fetchData();
+  }, []);
+  
+
+  return (
     <Card sx={sx} elevation={5}>
-        <CardContent>
-            <Chart options={options} series={series} type="area" height={350} width='100%'/>
-        </CardContent>
+      <CardContent>
+        <Chart options={options} series={series} type="area" height={350} width="100%" />
+      </CardContent>
     </Card>
   );
 };
+
+export default AreaChart;

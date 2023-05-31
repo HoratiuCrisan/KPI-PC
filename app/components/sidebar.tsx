@@ -2,7 +2,6 @@ import Statistics from '../statistics/page'
 import Users from '../users/page'
 import Teams from '../teams/page'
 import Projects from '../projects/page'
-import About from '../about/page'
 import Link from 'next/link'
 import {
    Drawer, 

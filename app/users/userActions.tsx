@@ -1,21 +1,33 @@
-import {Box, IconButton, Tooltip} from '@mui/material'
-import { Delete, Edit, Preview} from '@mui/icons-material'
+import { Box, Button, IconButton, Tooltip } from '@mui/material';
+import { Delete, Edit, Preview, Add } from '@mui/icons-material';
 
-const UserActions = (props: any) => {
-    return (
-        <Box>
-            <Tooltip title="Edit user details">
-                <IconButton >
-                    <Edit sx={{color: "green"}}/>
-                </IconButton>
-            </Tooltip>
-            <Tooltip title="Delete this user">
-                <IconButton >
-                    <Delete sx={{color: "red"}}/>
-                </IconButton>
-            </Tooltip>
-        </Box>
-    )
+interface UserActionsProps {
+  params: any;
+  onDelete: (id: number, position: number, teamN: string | null) => Promise<void>;
 }
 
-export default UserActions
+const UserActions = (props: UserActionsProps) => {
+  const { params, onDelete } = props;
+  const { ID_EMPLOYEE, POSITION } = params.row;
+
+  const handleDeleteClick = () => {
+    onDelete(ID_EMPLOYEE, POSITION, params.row.TEAM_N);
+  };
+
+  return (
+    <Box>
+      <Tooltip title="Edit user details">
+        <IconButton>
+          <Edit sx={{ color: 'green' }} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Delete this user">
+        <IconButton onClick={handleDeleteClick}>
+          <Delete sx={{ color: 'red' }} />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+};
+
+export default UserActions;

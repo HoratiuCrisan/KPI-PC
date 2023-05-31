@@ -1,110 +1,206 @@
 "use client"
-import {useEffect, useMemo, useState} from "react"
-import Navbar from "../components/navbar"
-import Sidebar from "../components/sidebar"
-import Statistics from "../statistics/page"
-import { Box, Toolbar,Typography, Grid, Container } from '@mui/material'
-import { DataGrid } from "@mui/x-data-grid"
-import UserActions from "./userActions"
-import UserCards from './cards'
+import { useEffect, useState } from "react";
+import Navbar from "../components/navbar";
+import Sidebar from "../components/sidebar";
+import UserActions from "./userActions";
+import UserCards from './cards';
+import { ScrollBar } from "../components/ScrollBar";
+import { DataGrid } from "@mui/x-data-grid";
+import { Box, Button, Card, CardActions, CardHeader, Divider, SvgIcon, Table, TableBody, TableCell, TableHead, TableRow, Toolbar, Typography, Grid, Container } from '@mui/material';
 
-
-
-
-const cards = [
-    {name: "Total Empolyees", value: 53},
-    {name: "Total Admins", value: 3},
-    {name: "Total Managers", value: 10},
-    {name: "Total Users", value: 40}
-]
-
-
-const users = [
-    {id: 1, firstName: 'John', lastName: 'Johnes', position: 'admin', hiredate: '05/06/2023'},
-    {id: 2, firstName: 'Lockie', lastName: 'Wells', position: 'manager', hiredate: '04/06/2023'},
-    {id: 3, firstName: 'Quiton', lastName: 'Hudson', position: 'user', hiredate: '03/05/2023'},
-    {id: 4, firstName: 'Sidney', lastName: 'Stevenson', position: 'admin', hiredate: '21/06/2020'},
-    {id: 5, firstName: 'Lynette', lastName: 'Boyce', position: 'user', hiredate: '05/06/2019'},
-    {id: 6, firstName: 'Dwayne', lastName: 'Prescott', position: 'user', hiredate: '05/06/2019'},
-    {id: 7, firstName: 'Kenith', lastName: 'Edwards', position: 'user', hiredate: '05/06/2019'},
-    {id: 8, firstName: 'Marilla', lastName: 'Walker', position: 'user', hiredate: '05/06/2019'},
-    {id: 9, firstName: 'Candice', lastName: 'Aitken', position: 'user', hiredate: '05/06/2019'},
-  ]
-  
-  const columns = [
-    {field: 'id', headerName:"ID", width: 60},
-    {field: 'firstName', headerName:"FirstName", width: 170},
-    {field: 'lastName', headerName:"SecondName", width: 170},
-    {field: 'position', headerName:"Position", width: 100},
-    {field: 'hiredate', headerName:"HireDate", width: 100},
-    {field: 'actions', headerName: "Actions", width: 150, renderCell: (params: any)=> <UserActions {...{params}} />}
-  ]
-
-const Users = () => {
-
-    return (
-        <div className="flex">
-        <Navbar />
-        <Sidebar />
-        
-       <Box flex="main" sx={{flexGrow: 1, py: 8}}>
-            <Container maxWidth="xl">
-                <Toolbar sx={{mt: -5}} />
-                <Typography variant="h6" fontWeight={600} >
-                    Home / <span className="text-blue-700"> Users </span>
-                </Typography>
-                <Toolbar sx={{mt: -5}}/>
-                {/* begining of the card component */}
-                <Grid container spacing={3}>
-                    {cards.map((elem)=> {
-                        return (
-                            <Grid item xs={12} md={6} lg={3} key={elem.name}>
-                                <UserCards 
-                                    sx={{height: '100%'}}
-                                    text={elem.name}
-                                    value={elem.value}
-                                />
-                            </Grid>
-                        )
-                    })}
-                {/* ending of the card component */}
-
-                {/* user data grid table */}
-                     <Grid
-                        item xs={8} md={10} lg={12}
-                        component={"main"} 
-                        sx={{hieght: 300, width: '100%', ml: 3}}                
-                    >
-                        <Toolbar />
-                        <DataGrid
-                            sx={{
-                                border: 'none', 
-                                '& .MuiDataGrid-columnSeparator': {display: 'none'}
-                            }}
-                            columns={columns}
-                            rows={users}
-                            getRowId={row=>row.id}
-                            initialState={{
-                                pagination: {
-                                    paginationModel: {
-                                        pageSize: 5,
-                                    }
-                                }
-                            }}
-                            pageSizeOptions={[5, 25, 50]}
-                            
-                            getRowSpacing={(params:any) =>({
-                                top: params.isFirstVisible ? 0 : 5,
-                                bottom: params.isLastVisible ? 0 : 5
-                            })}   
-                        />
-                    </Grid>
-                </Grid>         
-            </Container>
-       </Box>
-        
-        </div>
-    )
+interface User {
+  id: number;
+  ID_EMPLOYEE: number;
+  FIRST_NAME: string; // Change firstName to FIRST_NAME
+  LAST_NAME: string; // Change lastName to LAST_NAME
+  POSITION: number; // Change position to POSITION
+  DATE: string; // Change hiredate to DATE
+  EMAIL: string;
+  TEAM_N: string;
 }
 
-export default Users
+const Users = () => { // Remove unnecessary props declaration
+  const [users, setUsers] = useState<User[]>([]);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [totalAdmins, setTotalAdmins] = useState(0);
+  const [totalManagers, setTotalManagers] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
+
+  const handleDeleteUser = async (id: number, position: number, teamN: string | null) => {
+   console.log(id)
+    try {
+      const response = await fetch(`/delete-user/${id}?position=${position}&teamN=${teamN}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // User deleted successfully
+        setUsers(users.filter((user) => user.ID_EMPLOYEE !== id));
+      } else {
+        console.error('Failed to delete user');
+      }
+    } catch (error) {
+      console.error('An error occurred:', error);
+    }
+  };
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/statistics-users_u', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          const { totalUsers, totalAdmins, totalEmployees, totalManagers } = data;
+          // Generate an incremented ID for each user
+          const usersWithId = data.users.map((user: any, index: number) => ({
+            ...user,
+            id: index + 1,
+          }));
+
+          // Set the users state with the updated array
+          setUsers(usersWithId);
+          setTotalUsers(totalUsers);
+          setTotalAdmins(totalAdmins);
+          setTotalEmployees(totalEmployees);
+          setTotalManagers(totalManagers);
+        } else {
+          console.error('Failed to fetch users');
+        }
+      } catch (error) {
+        console.error('An error occurred:', error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  const columns = [
+    { field: 'id', headerName: "ID", width: 60 },
+    { field: 'FIRST_NAME', headerName: "First Name", width: 170 },
+    { field: 'LAST_NAME', headerName: "Last Name", width: 170 },
+    {field: 'EMAIL', headerName: "Email", width: 300},
+    {field: 'TEAM_N', headerName: "Team", width: 200},
+    { 
+      field: 'POSITION', 
+      headerName: "Position", 
+      width: 150,
+      renderCell: (params: any) => {
+        const positionLabel = getPositionLabel(params.value);
+        return <span>{positionLabel}</span>;
+      },
+    },
+
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      renderCell: (params: any) => (
+        <UserActions {...{ params, onDelete: handleDeleteUser, position: params.row.POSITION }} />
+      ),
+    },
+  ];
+
+  const getPositionLabel = (position: number) => {
+    if (position === 1) {
+      return 'USER';
+    } else if (position === 2) {
+      return 'MANAGER';
+    } else if (position === 3) {
+      return 'ADMIN';
+    } else {
+      return '';
+    }
+  };
+
+  const cards = [
+    { name: "Total Employees", value: totalEmployees },
+    { name: "Total Admins", value: totalAdmins },
+    { name: "Total Managers", value: totalManagers },
+    { name: "Total Users", value: totalUsers }
+  ];
+
+  return (
+    <div className="flex">
+      <Navbar />
+      <Sidebar />
+
+      <Box flex="main" sx={{ flexGrow: 1, py: 8 }}>
+        <Container maxWidth="xl">
+          <Toolbar sx={{ mt: -5 }} />
+          <Typography variant="h6" fontWeight={600}>
+            Home / <span className="text-blue-700"> Users </span>
+          </Typography>
+          <Toolbar sx={{ mt: -5 }} />
+
+          {/* Beginning of the card component */}
+          <Grid container spacing={3}>
+            {cards.map((elem) => (
+              <Grid item xs={12} md={6} lg={3} key={elem.name}>
+                <UserCards sx={{ height: '100%' }} text={elem.name} value={elem.value} />
+              </Grid>
+            ))}
+          </Grid>
+          {/* Ending of the card component */}
+
+          {/* User data grid table */}
+          <Toolbar sx={{ mt: -5 }} />
+          <Grid
+            item xs={8} md={10} lg={12}
+            component={"main"}
+            sx={{width: '100%', ml: 3 }}
+          >
+            <Toolbar />
+            <DataGrid
+              sx={{
+                border: 'none',
+                '& .MuiDataGrid-columnSeparator': { display: 'none' }
+              }}
+              columns={columns}
+              rows={users}
+              getRowId={(row) => row.id}
+              initialState={{
+                pagination: {
+                  paginationModel: {
+                    pageSize: 5,
+                  }
+                }
+              }}
+              pageSizeOptions={[5, 25, 50]}
+              getRowSpacing={(params: any) => ({
+                top: params.isFirstVisible ? 0 : 5,
+                bottom: params.isLastVisible ? 0 : 5
+              })}
+            />
+           <Button
+              variant="contained"
+              onClick={() => {
+                location.href = '/usersForm';
+              }}
+              sx={{
+                mt: 2,
+                ml: 3,
+                color: 'white',
+                backgroundColor: 'blue !important',
+                '&:hover': {
+                  backgroundColor: 'green !important',
+                },
+              }}
+            >
+              +Add User
+            </Button>
+          </Grid>
+        </Container>
+      </Box>
+    </div>
+  );
+};
+
+export default Users;
