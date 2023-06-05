@@ -116,14 +116,14 @@ nextApp.prepare().then(() => {
 
   app.post('/register-user', async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
-  
+
     try {
       // Check if user already exists
       const userExists = await db('EMPLOYEES').where({ EMAIL: email }).first();
       if (userExists) {
         return res.status(409).json({ message: 'Email already registered' });
       }
-  
+
       // Insert new user into database
       const newUser = await db('EMPLOYEES').insert({
         EMAIL: email,
@@ -131,7 +131,7 @@ nextApp.prepare().then(() => {
         FIRST_NAME: firstName,
         LAST_NAME: lastName
       }).returning(["EMAIL", "FIRST_NAME", "LAST_NAME"]);
-  
+
       res.status(201).json({ message: 'User created successfully', user: newUser[0] });
     } catch (error) {
       console.error(error);
@@ -450,6 +450,29 @@ app.delete('/remove-project', async (req, res) => {
   }
 })
 
+app.put('/open-project', async (req, res) => {
+  const data = await req.body.params
+  try {
+    await db('PROJECTS')
+    .update({PROJECT_STATUS: 'NOT FINISHED'})
+    .where('ID_PROJECT', data.ID_PROJECT)
+    res.status(200).json({message: 'Project status updated successfully!'})
+  } catch (error) {
+    console.error(error)
+  }
+})
+
+app.put('/close-project', async (req, res) => {
+  const data = await req.body.params
+  try {
+    await db('PROJECTS')
+    .update({PROJECT_STATUS: 'FINISHED'})
+    .where('ID_PROJECT', data.ID_PROJECT)
+    res.status(200).json({message: 'Project status updated successfully!'})
+  } catch (error) {
+    console.error(error)
+  }
+})
 
 app.post('/create-task', async (req, res) => {
   try {
@@ -480,7 +503,7 @@ app.get('/get-tasks/:pName', async (req, res) => {
         'T_NAME', 
         'FINISH_DATE', 
         'E_ID'
-      ).from('TASKS').where('T_PROJECT', name)
+      ).from('TASKS').where('T_PROJECT', name).orderBy('T_NAME')
     
       res.json({tasks})
   } catch (error) {
@@ -489,37 +512,86 @@ app.get('/get-tasks/:pName', async (req, res) => {
   }
 })
 
-
-
-  app.post('/statistics-users_u', async (req, res) => {
-    try {
-      const users = await db.select('ID_EMPLOYEE','FIRST_NAME', 'LAST_NAME', 'POSITION', 'DATE', 'EMAIL', 'TEAM_N')
-        .from('EMPLOYEES');
-  
-      const employeeCount = await db('EMPLOYEES').count('*').first();
-  
-      const managerCount = await db('EMPLOYEES').count('*').where('POSITION', 2).first();
-  
-      const adminCount = await db('EMPLOYEES').count('*').where('POSITION', 3).first();
-  
-      const usersCount = await db('EMPLOYEES').count('*').where('POSITION', 1).first();
-  
-      res.json({
-        users: users,
-        totalUsers: usersCount.count,
-        totalAdmins: adminCount.count,
-        totalEmployees: employeeCount.count,
-        totalManagers: managerCount.count
-      });
-    } catch (error) {
-      console.error('An error occurred:', error);
-      res.status(500).json({ error: 'Internal server error' });
+//update task data
+app.put('/update-task-data', async (req, res) => {
+  try {
+    const response = await req.body.params
+    const updateData = {
+      T_NAME: response.T_NAME,
+      FINISH_DATE: response.FINISH_DATE,
+      E_ID: response.E_ID,
     }
-  });
+    await db('TASKS')
+      .where('ID_TASK', response.ID_TASK)
+      .update(updateData)
+      .then(() => 
+        console.log("Task data updated successfully!")
+      )
+  } catch (error) {
+    console.error(error)
+  }
+})
+
+app.delete('/delete-task', async (req, res) => {
+  try {
+    const response = await req.body.params
+    await db('TASKS')
+      .where('ID_TASK', response.ID_TASK)
+      .del('')
+      .then(() => {
+        console.log("Task deleted successfully!")
+      })
+  } catch (error) {
+    console.error("Failed to delete task", error)
+  }
+})
+
+app.get('/get-status-tasks', async (req, res) => {
+  try {
+    const total_tasks_data = await db('TASKS').count('ID_TASK as COUNT').first()
+    const total_tasks = total_tasks_data.COUNT
+    
+    const finished_status_data = await db('TASKS')
+      .count('ID_TASK as COUNT')
+      .where('T_STATUS', 'FINISHED').first()
+    const finished_tasks = finished_status_data.COUNT
+
+    res.json({total_tasks, finished_tasks})
+  } catch (error) {
+    console.error(error)
+  }
+})
+
+app.post('/statistics-users_u', async (req, res) => {
+  try {
+    const users = await db.select('ID_EMPLOYEE','FIRST_NAME', 'LAST_NAME', 'POSITION', 'DATE', 'TEAM_N')
+      .from('EMPLOYEES').where('ACTIVE', 1);
+
+    const employeeCount = await db('EMPLOYEES').count('*').first();
+
+    const managerCount = await db('EMPLOYEES').count('*').where('POSITION', 2).first();
+
+    const adminCount = await db('EMPLOYEES').count('*').where('POSITION', 3).first();
+
+    const usersCount = await db('EMPLOYEES').count('*').where('POSITION', 1).first();
+
+    res.json({
+      users: users,
+      totalUsers: usersCount.count,
+      totalAdmins: adminCount.count,
+      totalEmployees: employeeCount.count,
+      totalManagers: managerCount.count
+    });
+  } catch (error) {
+    console.error('An error occurred:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
   app.post('/statistics-users', async (req, res) => {
     try {
-      const users = await db.select('FIRST_NAME', 'LAST_NAME', 'POSITION', 'EMAIL', 'TEAM_N', 'DATE')
+      const users = await db.select('FIRST_NAME', 'LAST_NAME', 'POSITION', 'DATE')
         .from('EMPLOYEES');
   
   
@@ -530,41 +602,28 @@ app.get('/get-tasks/:pName', async (req, res) => {
     }
   });
 
-
-  app.put('/edit-user/:id', async (req, res) => {
-    const id = req.params.id;
-    const { name, email } = req.body;
-  
-    // Replace this with your own database query to update the user
-    const updatedUser = await db('users')
-      .where({ id })
-      .update({ name, email });
-  
-    if (updatedUser) {
-      res.json({ success: true, message: 'User updated successfully' });
-    } else {
-      res.status(404).json({ success: false, message: 'User not found' });
-    }
-  });
-
   // Add the login route handler
   app.post('/login-user', async (req, res) => {
     const { email, password } = req.body;
   
-      const user = await db
-        .select('EMAIL', 'PASSWORD')
-        .from('EMPLOYEES')
-        .where({
-          EMAIL: email,
-        })
-        .first();
+    const user = await db
+      .select('EMAIL', 'PASSWORD', 'POSITION', 'TEAM_N')
+      .from('EMPLOYEES')
+      .where({
+        EMAIL: email,
+      })
+      .first();
   
-      if (user && user.PASSWORD === password) {
-        res.json({ success: true, user: { email } });
-      }else {
+    if (user && user.PASSWORD === password) {
+      res.json({
+        success: true,
+        email: email,
+        position: user.POSITION,
+        team: user.TEAM_N,
+      });
+    } else {
       res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
-
   });
 
   // Delete user API
@@ -572,25 +631,32 @@ app.get('/get-tasks/:pName', async (req, res) => {
     const id = parseInt(req.params.id);
     const position = parseInt(req.query.position);
     const teamN = req.query.teamN; // Retrieve teamN from req.query
+    const replacementManager = req.query.replacementManager ? parseInt(req.query.replacementManager) : null; // Retrieve replacementManager from req.query
 
     if (position === 2) {
       try {
         await db.transaction(async (trx) => {
           // Update employees of the team
           await trx('EMPLOYEES')
-            .where('POSITION', position)
-            .andWhere('TEAM_N', teamN)
-            .update({ TEAM_N: null, SALARY: 0, ACTIVE: 0, POSITION: 1});
+            .where('ID_EMPLOYEE', id)
+            .update({ TEAM_N: null, SALARY: 0, ACTIVE: 0 });
 
-          await trx('EMPLOYEES')
-          .andWhere('TEAM_N', teamN)
-          .update({ TEAM_N: null});
+          // If a replacement manager is selected, update the team's manager
+          if (replacementManager) {
+            await trx('EMPLOYEES')
+              .where('POSITION', 2)
+              .andWhere('ID_EMPLOYEE', replacementManager)
+              .update({ TEAM_N: teamN });
 
-          // Delete projects associated with the team
-          await trx('PROJECTS').where('TEAM', teamN).del();
-
-          // Delete the team from TEAMS table
-          await trx('TEAMS').where('TEAM_NAME', teamN).del();
+            await trx('TEAMS')
+              .where('TEAM_NAME', teamN)
+              .update({
+                TEAM_MANAGER: trx('EMPLOYEES')
+                  .select('ID_EMPLOYEE')
+                  .where('ID_EMPLOYEE', replacementManager)
+                  .limit(1) // Limit the subquery to retrieve a single value
+              });
+          }
 
         });
 
@@ -601,7 +667,7 @@ app.get('/get-tasks/:pName', async (req, res) => {
       }
     } else {
       try {
-        await db('EMPLOYEES').where('ID_EMPLOYEE', id).andWhere('POSITION', position).update({TEAM_N: null, SALARY: 0, ACTIVE: 0});
+        await db('EMPLOYEES').where('ID_EMPLOYEE', id).andWhere('POSITION', position).update({ TEAM_N: null, SALARY: 0, ACTIVE: 0 });
         res.sendStatus(200);
       } catch (error) {
         console.error('Failed to delete user:', error);
@@ -612,14 +678,14 @@ app.get('/get-tasks/:pName', async (req, res) => {
 
   app.get('/getteams', async (req, res) => {
     try {
-      const teams = await db.select('TEAM_NAME').from('TEAMS');
-      const teamNames = teams.map((team) => team.TEAM_NAME);
-      res.status(200).json({ teamNames });
+      const teams = await db.select('TEAM_NAME', 'TEAM_MANAGER').from('TEAMS');
+      res.status(200).json({ teams });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Internal server error' });
     }
   });
+
 
   app.post('/add-user', async (req, res) => {
     const { email, password, firstName, lastName, sal, pos, team } = req.body;
@@ -655,18 +721,36 @@ app.get('/get-tasks/:pName', async (req, res) => {
           return res.status(400).json({ message: 'Invalid team provided' });
         }
         newUser.TEAM_N = teamExists.TEAM_NAME;
+        newUser.ACTIVE =1;
       }
   
-      // Insert new user into the database
-      const [createdUserId] = await db('EMPLOYEES').insert(newUser).returning('ID_EMPLOYEE');
+      if (pos === 2 || pos === 'manager') {
+        const [createdUserId] = await db('EMPLOYEES').insert(newUser).returning('ID_EMPLOYEE');
+        const teamManagerId = await db('EMPLOYEES').select('ID_EMPLOYEE').where('EMAIL', email).first();
+        await db('TEAMS').where('TEAM_NAME', newUser.TEAM_N).update('TEAM_MANAGER', teamManagerId.ID_EMPLOYEE);
+        res.status(201).json({ message: 'User created successfully', userId: createdUserId });
+      } else {
+        const [createdUserId] = await db('EMPLOYEES').insert(newUser).returning('ID_EMPLOYEE');
+        res.status(201).json({ message: 'User created successfully', userId: createdUserId });
+      }
   
-      res.status(201).json({ message: 'User created successfully', userId: createdUserId });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Internal server error' });
     }
   });
 
+
+  app.get('/getroles', async (req, res) => {
+    try {
+      const positions = await db.select('POS_NAME').from('POSITIONS');
+      const posNames = positions.map((pos) => pos.POS_NAME);
+      res.status(200).json({ posNames });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
 
   app.get('*', (req, res) => {
     return handle(req, res);

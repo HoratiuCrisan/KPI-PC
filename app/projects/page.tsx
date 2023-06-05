@@ -41,6 +41,30 @@ interface ProjectArray {
 const Projects = () => {
     const [projectArray, setProjectArray] = useState<ProjectArray[]>([])
 
+    const [userRole, setRole] = useState(""); // Add role state
+    const [userTeam, setTeam] = useState<string | null>(null);
+    
+    const useRequireAuth = () => {
+      useEffect(() => {
+        // Check if the user is logged in
+        const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+        const team = localStorage.getItem('team');
+    
+        if (!email || !role) {
+          // If the user is not logged in, redirect to the login page
+          window.location.href = "/";
+         }else{
+          setRole(role);
+          setTeam(team);
+         }
+      }, []);
+      
+      return null; // Return null or a loading indicator if needed
+    };
+      
+    useRequireAuth();
+
     useEffect(() => {
         const fetchProjects = async () => {
         try {
@@ -120,12 +144,14 @@ const Projects = () => {
                                 Project List
                             </Typography>
                         </Grid>
-                        
+
+                        {(userRole === "2" || userRole === "3") && (
                         <Grid item xs={6} container justifyContent="flex-end">
                             <Button variant="contained" href="/projectsForm">
-                                Add project
+                            Add project
                             </Button>
                         </Grid>
+                        )}
                     </Grid>
     
                     <Divider />
@@ -144,22 +170,27 @@ const Projects = () => {
                             </Typography>
                          }
                          {
-                            _all_projects_array.map((elem:ProjectArray) => {
-                            return (
-                                    <Grid item xs={4} key={elem.Project.ID_PROJECT}>
-                                        <ProjectsCard 
-                                            sx={{height: '100%'}}
-                                            projectId={elem.Project.ID_PROJECT}
-                                            projectName={elem.Project.PROJECT_NAME}
-                                            sDate={elem.Project.TERM_START}
-                                            eDate={elem.Project.TERM_END}
-                                            status={elem.Project.PROJECT_STATUS}
-                                            teamName={elem.Project.TEAM}
-                                            key={elem.Project.ID_PROJECT}
-                                        />
-                                    </Grid>
+                            _all_projects_array
+                            .filter(
+                            (elem: ProjectArray) =>
+                                userRole === "1" || userRole === "2" ? elem.Project.TEAM === userTeam : true
                             )
-                        })
+                            .map((elem: ProjectArray) => {
+                            return (
+                                <Grid item xs={4} key={elem.Project.ID_PROJECT}>
+                                <ProjectsCard
+                                    sx={{ height: '100%' }}
+                                    projectId={elem.Project.ID_PROJECT}
+                                    projectName={elem.Project.PROJECT_NAME}
+                                    sDate={elem.Project.TERM_START}
+                                    eDate={elem.Project.TERM_END}
+                                    status={elem.Project.PROJECT_STATUS}
+                                    teamName={elem.Project.TEAM}
+                                    key={elem.Project.ID_PROJECT}
+                                />
+                                </Grid>
+                            );
+                            })
                         }      
                     </Grid>
                    

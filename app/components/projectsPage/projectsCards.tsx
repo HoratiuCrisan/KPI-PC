@@ -18,6 +18,7 @@ import React , {useState} from "react"
 import DeleteIcon from '@mui/icons-material/Delete'
 import InfoIcon from '@mui/icons-material/Info'
 import Link from 'next/link'
+import { useRouter } from "next/router"
 
 const ProjectCards = (props: any) => {
     // state of the dialog
@@ -34,10 +35,13 @@ const ProjectCards = (props: any) => {
                 },
                 body: JSON.stringify({projectName})
             })
+            useRouter().reload()
         } catch (error) {
             console.error(error)
         }
+        window.location.reload()
     }
+
     function handleDelete() {
         deleteProject(projectName)
     }
@@ -53,7 +57,7 @@ const ProjectCards = (props: any) => {
             <CardHeader 
                 title={projectName} 
                 subheader={sDate.slice(0,10) + ' to ' + eDate.slice(0,10)}
-                titleTypographyProps={{variant: "body1", fontWeight: 800, color: 'blue'}}
+                titleTypographyProps={{variant: "body1", fontWeight: 1000, color: 'blue'}}
                 subheaderTypographyProps={{variant: "body2", fontWeight: 700, color: "gray"}}
             /> 
 
@@ -69,12 +73,27 @@ const ProjectCards = (props: any) => {
                 >
                 <Link href={`projects/${projectId}`}>
                 <Stack spacing={1} display={"flex"} key={teamName}>
-                    <Typography
+                    {status.toLowerCase() == "finished" ? 
+                    (
+                        <Typography
+                        color="#4ade80"
+                        variant="body2"
+                        sx={{fontWeight: 800}}
+                        >
+                            {status}
+                        </Typography>
+                    ) : (
+                        <Typography
                         color="red"
                         variant="body2"
-                    >
-                        {status}
-                    </Typography>
+                        sx={{fontWeight: 800}}
+                        >
+                            {status}
+                        </Typography>
+                    )
+                    } 
+                    
+                   
 
                     <Typography
                         color="black"

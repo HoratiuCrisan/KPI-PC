@@ -74,7 +74,7 @@ export const NewUsers = (props: { sx: any; }) => {
                   Last Name
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>
-                  Position
+                  Role
                 </TableCell>
                 <TableCell sortDirection="desc" sx={{ fontWeight: 600 }}>
                   Hire Date

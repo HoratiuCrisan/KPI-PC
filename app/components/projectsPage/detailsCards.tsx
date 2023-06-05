@@ -9,14 +9,17 @@ import {
     Button,
     Dialog,
     DialogContent,
+    DialogActions,
+    DialogContentText,
     DialogTitle,
     TextField,
+    ListItemButton
 } from "@mui/material"
 
 import {
     DataGrid,
     GridRowsProp,
-    GridColDef
+    GridColDef,
 } from "@mui/x-data-grid"
 import Select from "react-select"
 import Image from 'next/image'
@@ -24,8 +27,13 @@ import pfpAvatar from "../../../public/assets/pfpAvatar.svg"
 import { LocalizationProvider } from "@mui/x-date-pickers"
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import React, {useState, useEffect} from 'react'
+import React, {useState, useEffect, useReducer} from 'react'
 import { DemoItem } from "@mui/x-date-pickers/internals/demo"
+import DeleteIcon from '@mui/icons-material/Delete'
+import SaveAsIcon from '@mui/icons-material/SaveAs'
+import { LinearProgress } from '@mui/material';
+import { useRouter } from "next/navigation"
+import dayjs from "dayjs"
 
 interface User {
     ID: number,
@@ -42,20 +50,35 @@ interface Task {
     E_ID: number,
 }
 
+interface Project {
+    ID_PROJECT: number,
+    PROJECT_NAME: string,
+    TEAM: string,
+    PROJECT_STATUS: string,
+    DESCRIPTION: string,
+    TERM_START: Date,
+    TERM_END: Date
+}
 
-const columns: GridColDef[] = [
-    { field: 'T_NAME', headerName: 'Task Name', width: 150},
-    { field: 'T_STATUS', headerName: 'Task Status', width: 150},
-    { field: 'FINISH_DATE', headerName: 'Due Date', width: 150},
-    { field: 'E_ID', headerName: 'User ID', width: 150},
-]
 
-const rows: GridRowsProp = [
-    { id: 1, col1: 'Hello', col2: 'World', col3: 'Hello', col4: 'World', col5: 'World' },
-    { id: 2, col1: 'DataGridPro', col2: 'is Awesome', col3: 'Hello', col4: 'World', col5: 'World' },
-    { id: 3, col1: 'MUI', col2: 'is Amazing', col3: 'Hello', col4: 'World', col5: 'World'},
-    { id: 4, col1: 'blalba', col2: 'asdfasdf', col3: 'Hello', col4: 'World', col5: 'World'}
-]
+
+// set PROJECT_STATUS back to NOT FINISHED
+
+const openProject = async (params: any) => {
+    console.log({params})
+    try {
+        await fetch('/open-project', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ params })
+        })
+    } catch(error) {
+        console.error(error)
+    }
+}
+
 
 const DetailsCards = (props: any) => {
     const {project, manager, users, empNumber} = props
@@ -66,6 +89,130 @@ const DetailsCards = (props: any) => {
     const [taskName, setTaskName] = useState<String>('')
     const [taskDate, setTaskDate] = useState<Date | null>(null)
     const [tasksList, setTasksList] = useState<Task[]>([])
+    //getting the list of users id for the select inside the data grid
+    const usersId = users?.map((currentUser:User) => {
+        return currentUser.ID
+    })
+    //set values for status bar
+    const [progresValue, setProgresValue] = useState(0)
+    const [projectStatusError, setProjectStatusError] = useState<String | null>(null)
+    const [finishProjectDialog, setFinishProjectDialog] = useState(false)
+    const [openProjectDialog, setOpenProjectDialog] = useState(false)
+    
+    const pageReload = () => {
+        window.location.reload()
+    }
+
+    //Set the PROJECT_STATUS to FINISHED
+    const closeProject = async (params: Project) => {
+        setProjectStatusError(null)
+        
+        setFinishProjectDialog(false)
+        if (progresValue != 100) {
+            setProjectStatusError('Please finish all tasks before closing the project')
+            return 
+        }
+        
+        try {
+            await fetch('/close-project', {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ params })
+            })
+        } catch(error) {
+            console.error(error)
+        }
+
+        pageReload()
+    }
+
+    {/* open project functionality */}
+    const openProject = async (params: Project) => {
+        try {
+            await fetch('/open-project', {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ params })
+            })
+        } catch(error) {
+            console.error(error)
+        }
+        setOpenProjectDialog(false)
+        pageReload()
+    }
+
+const handleEditRow = async (params:Task) => {
+    try {
+       await fetch('/update-task-data', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({params})
+        })
+    } catch (error) {
+        console.error("could not send the new task data to the server ", error)
+    }
+}
+
+    const handleDeleteRow = async (params:Task) => {
+        const id = params.ID_TASK
+        console.log(params)
+        try {
+        const response = await fetch('/delete-task', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({params})
+            })
+            
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    // Data grid columns information
+    const columns: GridColDef[] = [
+        { field: 'T_NAME', headerName: 'Task Name', width: 150, editable: true},
+        { field: 'T_STATUS', headerName: 'Task Status', width: 150},
+        { field: 'FINISH_DATE', headerName: 'Due Date', width: 150, 
+            editable: true, type: 'Date'
+        },
+        { field: 'E_ID', headerName: 'User ID', width: 150, editable: true,
+            type: 'singleSelect', valueOptions: usersId
+        },
+        { field: 'actions', headerName: 'Actions', width: 140, 
+            renderCell: (params: any) => (
+               <Stack direction={"row"} sx={{ml: -3}} spacing={0.5}>
+                    <ListItemButton 
+                        onClick={() =>{ 
+                            handleDeleteRow(params.row);
+                            pageReload()
+                            }
+                        }
+                        sx={{borderRadius: '45%', color: "red"}}     
+                    >
+                        <DeleteIcon />
+                    </ListItemButton>
+
+                    <ListItemButton 
+                        onClick={() => {
+                            handleEditRow(params.row);
+                            pageReload()
+                        }}
+                        sx={{borderRadius: '45%'}}    
+                    >
+                        <SaveAsIcon />
+                    </ListItemButton>
+               </Stack>
+            )
+        },
+    ]
 
     //fetching the tasks from the database
     useEffect(() => {
@@ -85,19 +232,33 @@ const DetailsCards = (props: any) => {
                     const current_task = {
                         ID_TASK: elem.ID_TASK,
                         T_STATUS: elem.T_STATUS,
-                        FINISH_DATE: elem.FINISH_DATE.toString().slice(0,10),
+                        FINISH_DATE: dayjs(elem.FINISH_DATE).format("MM/DD/YYYY") ,
                         E_ID: elem.E_ID,
                         T_NAME: elem.T_NAME
                     }
                     current_task_list.push(current_task)
                 })
                 setTasksList(current_task_list) 
-                console.log(current_task_list)
             } catch (error) {
                 console.error(error)
             }
         }
         }
+        const getStatusBarData = async () => {
+            try {
+                const response = await fetch('/get-status-tasks', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                      },
+                })
+                const data = await response.json()
+                setProgresValue(Math.round((data.finished_tasks * 100) / data.total_tasks)) 
+            } catch (error) {
+                console.error(error)
+            }
+        }
+        getStatusBarData()
         getTasks()
     }, [project?.PROJECT_NAME])
 
@@ -128,7 +289,7 @@ const DetailsCards = (props: any) => {
         const task = {
             TEAM_A: project?.TEAM,
             T_PROJECT: project?.PROJECT_NAME,
-            T_STATUS: 'Not finished',
+            T_STATUS: 'NOT FINISHED',
             FINISH_DATE: taskDate,
             T_NAME: taskName,
             E_ID: usr
@@ -141,9 +302,12 @@ const DetailsCards = (props: any) => {
                 },
                 body: JSON.stringify({task})
             })
+
         } catch (error) {
             console.error(error)
         }
+
+        pageReload()
     }
 
     return (
@@ -168,6 +332,37 @@ const DetailsCards = (props: any) => {
                         <Typography variant="body1">
                             {project?.DESCRIPTION}
                         </Typography>
+
+                        <Typography variant="body2" sx={{mt: 1, mb: 0.5}}>
+                           Project status: {progresValue}%
+                        </Typography>
+                        <LinearProgress variant="determinate" value={progresValue} />
+
+                        {project?.PROJECT_STATUS.toLowerCase() == "not finished" ?
+                            (
+                                <Button 
+                                    onClick={() => setFinishProjectDialog(true)}
+                                    sx={{mt: 2}}
+                                >
+                                    Close Project
+                                </Button>
+                            ) : (
+                                <Button 
+                                    onClick={() => setOpenProjectDialog(true)}
+                                    sx={{mt: 2}}
+                                >
+                                    Open Project
+                                </Button>
+                            )
+                        }
+                         {projectStatusError && 
+                            <Typography 
+                                variant="h6" 
+                                className="text-red-500 mt-2" 
+                                align="center"
+                            >
+                                {projectStatusError}
+                            </Typography>}
                     </CardContent>
                 </Card>
 
@@ -224,13 +419,34 @@ const DetailsCards = (props: any) => {
                             direction={"row"} 
                             spacing={32}
                         >
+                            {project?.PROJECT_STATUS.toLowerCase() == "not finished" ?
+                            (
                             <Typography 
                                 variant="body1" 
                                 sx={{color: "gray", ml: 2}}
                             >
                                 Status
                             </Typography>
+                            ) : (
+                                <Typography 
+                                variant="body1" 
+                                sx={{color: "gray", ml: 2, mr: 3}}
+                            >
+                                Status
+                            </Typography>
+                            )}
 
+                            {project?.PROJECT_STATUS.toLowerCase() == 'finished' &&
+                                <Typography 
+                                variant="body1" 
+                                sx={{color: "green"}}
+                                fontWeight={600}
+                            >
+                                {project?.PROJECT_STATUS}
+                            </Typography>                            
+                            }
+
+                            {project?.PROJECT_STATUS.toLowerCase() == 'not finished' &&
                             <Typography 
                                 variant="body1" 
                                 sx={{color: "red"}}
@@ -238,6 +454,7 @@ const DetailsCards = (props: any) => {
                             >
                                 {project?.PROJECT_STATUS}
                             </Typography>
+                            }
 
                         </Stack>
                             <Toolbar sx={{mt: -5}} />
@@ -358,6 +575,7 @@ const DetailsCards = (props: any) => {
                             sx={{mb: 3}}
                             alignItems={"flex-end"}
                         >
+                            {project?.PROJECT_STATUS.toLowerCase() === 'not finished' &&
                             <Button
                                 onClick={() => setDialog(true)}
                                 sx={{"&.MuiButton-text": { bgcolor: "#2563eb" , color: "white"}}}
@@ -365,12 +583,14 @@ const DetailsCards = (props: any) => {
                             >
                                 Add Task
                             </Button>
+                        }
                         </Grid>
                         {tasksList.length > 0 &&
                         <DataGrid
                             rows={tasksList} 
                             columns={columns}
                             getRowId={(row) => row.ID_TASK} 
+                            
                         />
                         }
 
@@ -463,6 +683,82 @@ const DetailsCards = (props: any) => {
                         </DialogContent>
 
                     </Dialog>
+
+                    {/* finish project dialog */}
+                    <Dialog
+                        open={finishProjectDialog}
+                        onClose={() => setFinishProjectDialog(false)}
+                        aria-labelledby="alert-dialog-title"
+                        aria-describedby="alert-dialog-description"
+                    >
+                        <DialogTitle
+                            id="alert-dialog-title"
+                        >  
+                            {"Are you sure you want to continue?"}
+                        </DialogTitle>
+                        <DialogContent>
+                            <DialogContentText
+                                id="alert-dialog-description"
+                            >
+                                Are you sure you want to continue?
+                            </DialogContentText>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button
+                                sx={{"&.MuiButton-text": { bgcolor: "red" , color: "white"}}}
+                                variant="text"
+                                onClick={() => setDialog(false)}
+                            >
+                                No
+                            </Button>
+                            <Button
+                                sx={{"&.MuiButton-text": { bgcolor: "blue" , color: "white"}}}
+                                variant="text"
+                                onClick={() => closeProject(project)}
+                            >
+                                Yes
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+
+                    {/* open project dialog */}
+                    <Dialog
+                        open={openProjectDialog}
+                        onClose={() => setOpenProjectDialog(false)}
+                        aria-labelledby="alert-dialog-title"
+                        aria-describedby="alert-dialog-description"
+                    >
+                        <DialogTitle
+                            id="alert-dialog-title"
+                        >  
+                            {"Are you sure you want to continue?"}
+                        </DialogTitle>
+                        <DialogContent>
+                            <DialogContentText
+                                id="alert-dialog-description"
+                            >
+                                Are you sure you want to continue?
+                            </DialogContentText>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button
+                                sx={{"&.MuiButton-text": { bgcolor: "red" , color: "white"}}}
+                                variant="text"
+                                onClick={() => setOpenProjectDialog(false)}
+                            >
+                                No
+                            </Button>
+                            <Button
+                                sx={{"&.MuiButton-text": { bgcolor: "blue" , color: "white"}}}
+                                variant="text"
+                                onClick={() => openProject(project)}
+                            >
+                                Yes
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+            
+            
                 </Card>
             </Grid>
         </Grid>

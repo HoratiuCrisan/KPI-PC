@@ -27,6 +27,30 @@ interface User {
 
 const Teams = () => {
     const [teamArray, setTeamArray] = useState<FullTeam[]>([])
+
+    const [userRole, setRole] = useState(""); // Add role state
+    const [userTeam, setTeam] = useState<string | null>(null);
+    
+    const useRequireAuth = () => {
+      useEffect(() => {
+        // Check if the user is logged in
+        const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+        const team = localStorage.getItem('team');
+    
+        if (!email || !role) {
+          // If the user is not logged in, redirect to the login page
+          window.location.href = "/";
+         }else{
+          setRole(role);
+          setTeam(team);
+         }
+      }, []);
+      
+      return null; // Return null or a loading indicator if needed
+    };
+      
+    useRequireAuth();
     
 
     useEffect(() => {
@@ -101,12 +125,12 @@ const Teams = () => {
                                 Team List
                             </Typography>
                         </Grid>
-                        
+                        {( userRole === "3") && (
                         <Grid item xs={6} container justifyContent="flex-end">
                             <Button variant="contained" href="/teamsForm">
                                 Add team
                             </Button>
-                        </Grid>
+                        </Grid>)}
                     </Grid>
     
                     <Divider />
@@ -123,20 +147,23 @@ const Teams = () => {
                                 No teams yet!
                             </Typography>
                         }            
-                        {fullTeamArray.map((elem:FullTeam) => {
+                        {fullTeamArray
+                        .filter((elem: FullTeam) => userRole !== "1" && userRole !== "2" || elem.team.TEAM_NAME === userTeam)
+                        .map((elem: FullTeam) => {
                             return (
-                                <Grid item xs={4} key={elem.team.ID_TEAM}>
-                                    <TeamsCards 
-                                        sx={{height: '100%'}} 
-                                        teamID={elem.team.ID_TEAM}
-                                        teamName={elem.team.TEAM_NAME}
-                                        teamManager={elem.manager.FIRST_NAME + ' ' + elem.manager.LAST_NAME}
-                                        teamMembers={elem.members}
-                                        key={elem.team.ID_TEAM}
-                                    />
-                                </Grid>
-                            )
+                            <Grid item xs={4} key={elem.team.ID_TEAM}>
+                                <TeamsCards
+                                sx={{ height: '100%' }}
+                                teamID={elem.team.ID_TEAM}
+                                teamName={elem.team.TEAM_NAME}
+                                teamManager={elem.manager.FIRST_NAME + ' ' + elem.manager.LAST_NAME}
+                                teamMembers={elem.members}
+                                key={elem.team.ID_TEAM}
+                                />
+                            </Grid>
+                            );
                         })}
+
                     </Grid>
                     <Toolbar />
                     

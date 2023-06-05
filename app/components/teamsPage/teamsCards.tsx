@@ -56,6 +56,7 @@ const TeamsCards = (props: any) => {
         } catch (error) {
             console.error(error)
         }
+        window.location.reload()
     }
     function handleDelete() {
         updateUserData(teamName)
@@ -97,7 +98,7 @@ const TeamsCards = (props: any) => {
                                 variant="body2"
                                 key={e.FIRST_NAME + ' ' +e.LAST_NAME}
                                 >
-                                    {e.FIRST_NAME}
+                                    {e.FIRST_NAME + ' ' + e.LAST_NAME + ','}
                                 </Typography>
                            )
                         })}

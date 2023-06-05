@@ -9,6 +9,7 @@ import ClipboardDocumentListIcon from '@heroicons/react/24/solid/ClipboardDocume
 import UserGroupIcon from '@heroicons/react/24/solid/UserGroupIcon'
 import CurrencyDollarIcon from '@heroicons/react/24/solid/CurrencyDollarIcon'
 import {NewUsers} from "../components/NewUsers"
+
 //import {userDataGrid} from "../components/userDataGrid"
 const Statistics = () => {
     const [userCount, setUserCount] = useState(0);
@@ -47,14 +48,14 @@ const Statistics = () => {
   
     const statCards = [
       {
-        text: 'New Users',
+        text: 'New Users This Month',
         icon: <UserIcon />,
         value: userCount,
         bgcolor: '#ef4444',
         money: false,
       },
       {
-        text: 'Tasks/Month',
+        text: 'Tasks Finished This Month',
         icon: <ClipboardDocumentListIcon />,
         value: tasksCount,
         bgcolor: '#10b981',

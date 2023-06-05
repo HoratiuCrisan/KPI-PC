@@ -8,26 +8,67 @@ import FemaleAvatar from '../../public/assets/FemaleAvatar.svg';
 import ComputerRegister from '../../public/assets/computer_register.svg';
 import styles from './page.module.css';
 
+
 const AddUser = () => {
+  const [userRole, setRole] = useState(""); // Add role state
+  const [userTeam, setTeam] = useState<string | null>(null);
+  
+  const useRequireAuth = () => {
+    useEffect(() => {
+      // Check if the user is logged in
+      const email = localStorage.getItem('email');
+      const role = localStorage.getItem('role');
+      const team = localStorage.getItem('team');
+  
+      if (!email || !role) {
+        // If the user is not logged in, redirect to the login page
+        window.location.href = "/";
+       }else{
+        setRole(role);
+        setTeam(team);
+       }
+    }, []);
+    
+    return null; // Return null or a loading indicator if needed
+  };
+    
+  useRequireAuth();
+
   const [addUserFirstName, setAddUserFirstName] = useState('');
   const [addUserLastName, setAddUserLastName] = useState('');
   const [addUserEmail, setAddUserEmail] = useState('');
   const [addUserPassword, setAddUserPassword] = useState('');
   const [addUserSalary, setAddUserSalary] = useState('');
   const [addUserPosition, setAddUserPosition] = useState('');
-  const [addUserTeam, setAddUserTeam] = useState('');
+  const [addUserTeam, setAddUserTeam] = useState<string | null>(''); // Initialize with an empty string
   const [teamNames, setTeamNames] = useState([]);
+  const [positionNames, setPositionNames] = useState([]);
+
 
   useEffect(() => {
     fetch('/getteams')
       .then((response) => response.json())
       .then((data) => {
-        setTeamNames(data.teamNames);
+        let teams = data.teams;
+        if (addUserPosition === 'manager') {
+          teams = teams.filter((team: { TEAM_MANAGER: null; }) => team.TEAM_MANAGER === null);
+        }
+        setTeamNames(teams.map((team: { TEAM_NAME: any; }) => team.TEAM_NAME));
       })
       .catch((error) => {
         console.error('An error occurred:', error);
       });
-  }, []);
+  
+    fetch('/getroles')
+      .then((response) => response.json())
+      .then((data) => {
+        setPositionNames(data.posNames);
+      })
+      .catch((error) => {
+        console.error('An error occurred:', error);
+      });
+  }, [addUserPosition]);
+
 
   const handleSubmit = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
@@ -48,7 +89,7 @@ const AddUser = () => {
       const data = await response.json();
       if (response.ok) {
         alert(data.message);
-        // redirect user to login page, or wherever you want
+        // redirect here if needed
       } else {
         alert(data.message);
       }
@@ -141,50 +182,111 @@ const AddUser = () => {
                 </span>
               </div>
 
-              <div className={`${styles.input_group}`}>
-                <input
-                  type="text"
-                  name="position"
-                  placeholder="Position"
-                  required
-                  className={`${styles.input_text}`}
-                  value={addUserPosition}
-                  onChange={(e) => setAddUserPosition(e.target.value)}
-                />
-                <span className="icon flex items-center px-4">
-                  <HiUserCircle size={25} />
-                </span>
-              </div>
+              {userRole === '2' && (
+                <div className={`${styles.input_group}`}>
+                  <select
+                    name="position"
+                    placeholder="Role"
+                    required
+                    className={`${styles.input_text}`}
+                    value={addUserPosition}
+                    onChange={(e) => setAddUserPosition(e.target.value)}
+                  >
+                    <option value="">Select a role</option>
+                    {positionNames
+                      .filter((position) => position === 'user')
+                      .map((position) => (
+                        <option key={position} value={position}>
+                          {position}
+                        </option>
+                      ))}
+                  </select>
+                  <span className="icon flex items-center px-4">
+                    <HiUserCircle size={25} />
+                  </span>
+                </div>
+              )}
 
-              <div className={`${styles.input_group}`}>
+              {userRole === '3' && (
+                // Render all positions
+                <div className={`${styles.input_group}`}>
+                  <select
+                    name="position"
+                    placeholder="Role"
+                    required
+                    className={`${styles.input_text}`}
+                    value={addUserPosition}
+                    onChange={(e) => setAddUserPosition(e.target.value)}
+                  >
+                    <option value="">Select a role</option>
+                    {positionNames.map((position) => (
+                      <option key={position} value={position}>
+                        {position}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="icon flex items-center px-4">
+                    <HiUserCircle size={25} />
+                  </span>
+                </div>
+              )}
+
+              {userRole === '2' && (
+                <div className={`${styles.input_group}`}>
+                  <select
+                    name="team"
+                    required
+                    className={`${styles.input_text}`}
+                    value={addUserTeam ?? ''} // Use nullish coalescing operator to handle null value
+                    onChange={(e) => setAddUserTeam(e.target.value)}
+                  >
+                    <option value="">Select a team</option>
+                    {teamNames
+                      .filter((teamName) => teamName === userTeam)
+                      .map((teamName) => (
+                        <option key={teamName} value={teamName}>
+                          {teamName}
+                        </option>
+                      ))}
+                  </select>
+                  <span className="icon flex items-center px-4">
+                    <HiUserGroup size={25} />
+                  </span>
+                </div>
+              )}
+
+              {userRole === '3' && (
+                // Render all teams
+                <div className={`${styles.input_group}`}>
                 <select
                   name="team"
                   required
                   className={`${styles.input_text}`}
-                  value={addUserTeam}
+                  value={addUserTeam ?? ''} // Use nullish coalescing operator to handle null value
                   onChange={(e) => setAddUserTeam(e.target.value)}
                 >
-                  <option value="">Select a team</option>
-                  {teamNames.map((teamName) => (
-                    <option key={teamName} value={teamName}>
-                      {teamName}
-                    </option>
-                  ))}
-                </select>
-                <span className="icon flex items-center px-4">
-                  <HiUserGroup size={25} />
-                </span>
-              </div>
+                    <option value="">Select a team</option>
+                    {teamNames.map((teamName) => (
+                      <option key={teamName} value={teamName}>
+                        {teamName}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="icon flex items-center px-4">
+                    <HiUserGroup size={25} />
+                  </span>
+                </div>
+              )}
 
               <div className="input-button">
                 <button type="submit" className={`${styles.button} bg-blue-600`}>
-                  ADD USER
+                  ADD USER/MANAGER
                 </button>
                 <Link href={'/users/'}>
-                <p className="text-sm xl:text-lg flex justify-center">
-                    Go to  <span className="text-sky-700 font-semibold px-1 xl:text-lg">Users</span>
-                </p>
-            </Link>
+                  <p className="text-sm xl:text-lg flex justify-center">
+                    Go to <span className="text-sky-700 font-semibold px-1 xl:text-lg">Users</span>
+                  </p>
+                </Link>
               </div>
             </form>
           </div>
