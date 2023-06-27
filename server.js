@@ -86,6 +86,28 @@ nextApp.prepare().then(() => {
       res.status(500).json({ success: false, message: err.message });
     }
   });
+
+  app.get('/components-piechart', async (req, res) => {
+    try {
+      const teamsData = await db
+        .select('TEAMS.TEAM_NAME as team')
+        .count('TASKS.ID_TASK as taskCount')
+        .from('TEAMS')
+        .leftJoin('TASKS', 'TEAMS.TEAM_NAME', 'TASKS.TEAM_A')
+        .groupBy('TEAMS.TEAM_NAME');
+  
+      const teamsTasks = teamsData.reduce((result, { team, taskCount }) => {
+        if (taskCount > 0) {
+          result[team] = taskCount;
+        }
+        return result;
+      }, {});
+
+      res.json({ success: true, data: teamsTasks })
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
   
 
   app.post('/statistics-statcards', async (req, res) => {
@@ -546,9 +568,11 @@ app.delete('/delete-task', async (req, res) => {
   }
 })
 
-app.get('/get-status-tasks', async (req, res) => {
+app.get('/get-status-tasks:pName', async (req, res) => {
+  const name = req.params.pName
   try {
-    const total_tasks_data = await db('TASKS').count('ID_TASK as COUNT').first()
+    const total_tasks_data = await db('TASKS').count('ID_TASK as COUNT')
+    .where('TEAM_A', name).first()
     const total_tasks = total_tasks_data.COUNT
     
     const finished_status_data = await db('TASKS')
@@ -561,6 +585,25 @@ app.get('/get-status-tasks', async (req, res) => {
     console.error(error)
   }
 })
+
+app.put('/finish-task', async (req, res) => {
+  try {
+    const task = req.body.task;
+    const updateData = {
+      T_STATUS: "FINISHED",
+    };
+    await db('TASKS')
+      .where('ID_TASK', task.ID_TASK)
+      .update(updateData)
+      .then(() => {
+        console.log("Task finished successfully!");
+        res.sendStatus(200);
+      });
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
 
 app.post('/statistics-users_u', async (req, res) => {
   try {
@@ -607,7 +650,7 @@ app.post('/statistics-users_u', async (req, res) => {
     const { email, password } = req.body;
   
     const user = await db
-      .select('EMAIL', 'PASSWORD', 'POSITION', 'TEAM_N')
+      .select('ID_EMPLOYEE','EMAIL', 'PASSWORD', 'POSITION', 'TEAM_N')
       .from('EMPLOYEES')
       .where({
         EMAIL: email,
@@ -620,11 +663,13 @@ app.post('/statistics-users_u', async (req, res) => {
         email: email,
         position: user.POSITION,
         team: user.TEAM_N,
+        id: user.ID_EMPLOYEE
       });
     } else {
       res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
   });
+
 
   // Delete user API
   app.delete('/delete-user/:id', async (req, res) => {

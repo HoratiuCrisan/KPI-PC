@@ -45,6 +45,7 @@ const Login = () => {
         localStorage.setItem('email', data.email);
         localStorage.setItem('role', data.position);
         localStorage.setItem('team', data.team);
+        localStorage.setItem('id', data.id);
 
         console.log('User Role:', data.position);
         console.log('User Team:', data.team);

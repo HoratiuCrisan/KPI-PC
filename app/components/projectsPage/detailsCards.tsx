@@ -34,6 +34,7 @@ import SaveAsIcon from '@mui/icons-material/SaveAs'
 import { LinearProgress } from '@mui/material';
 import { useRouter } from "next/navigation"
 import dayjs from "dayjs"
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 interface User {
     ID: number,
@@ -62,25 +63,37 @@ interface Project {
 
 
 
-// set PROJECT_STATUS back to NOT FINISHED
-
-const openProject = async (params: any) => {
-    console.log({params})
-    try {
-        await fetch('/open-project', {
-            method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ params })
-        })
-    } catch(error) {
-        console.error(error)
-    }
-}
 
 
 const DetailsCards = (props: any) => {
+
+    const [userRole, setRole] = useState(""); // Add role state
+    const [userTeam, setTeam] = useState<string | null>(null);
+    const [userId, setId] = useState<string | null>(null);
+    
+    const useRequireAuth = () => {
+      useEffect(() => {
+        // Check if the user is logged in
+        const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+        const team = localStorage.getItem('team');
+        const id = localStorage.getItem('id');
+    
+        if (!email || !role) {
+          // If the user is not logged in, redirect to the login page
+          window.location.href = "/";
+         }else{
+          setRole(role);
+          setTeam(team);
+          setId(id);
+         }
+      }, []);
+      
+      return null; // Return null or a loading indicator if needed
+    };
+      
+    useRequireAuth();
+
     const {project, manager, users, empNumber} = props
     const [usr, setUsr] = useState<Number>(0)
     const [dialog, setDialog] = useState(false)
@@ -89,6 +102,7 @@ const DetailsCards = (props: any) => {
     const [taskName, setTaskName] = useState<String>('')
     const [taskDate, setTaskDate] = useState<Date | null>(null)
     const [tasksList, setTasksList] = useState<Task[]>([])
+    const [filteredTasksList, setFilteredTasksList] = useState<Task[]>([]);
     //getting the list of users id for the select inside the data grid
     const usersId = users?.map((currentUser:User) => {
         return currentUser.ID
@@ -103,6 +117,7 @@ const DetailsCards = (props: any) => {
         window.location.reload()
     }
 
+      
     //Set the PROJECT_STATUS to FINISHED
     const closeProject = async (params: Project) => {
         setProjectStatusError(null)
@@ -159,6 +174,20 @@ const handleEditRow = async (params:Task) => {
     }
 }
 
+const finishTask = async (task: Task) => {
+    try {
+      await fetch('/finish-task', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ task })
+      });
+    } catch (error) {
+      console.error("could not send the task data to the server ", error);
+    }
+  };
+
     const handleDeleteRow = async (params:Task) => {
         const id = params.ID_TASK
         console.log(params)
@@ -189,15 +218,28 @@ const handleEditRow = async (params:Task) => {
         { field: 'actions', headerName: 'Actions', width: 140, 
             renderCell: (params: any) => (
                <Stack direction={"row"} sx={{ml: -3}} spacing={0.5}>
+               {userRole === '1' ? (
+                <ListItemButton 
+                onClick={() => {
+                    finishTask(params.row);
+                    pageReload()
+                }}
+                    sx={{borderRadius: '45%'}}
+                >
+                    <CheckCircleIcon />
+                </ListItemButton>
+                ) : (
+                <Stack direction={"row"}  spacing={0.5}>
                     <ListItemButton 
                         onClick={() =>{ 
                             handleDeleteRow(params.row);
                             pageReload()
                             }
                         }
-                        sx={{borderRadius: '45%', color: "red"}}     
+                    sx={{borderRadius: '45%', color: "red"}}
+                    disabled={userRole !== '2' && userRole !== '3'}
                     >
-                        <DeleteIcon />
+                    <DeleteIcon />
                     </ListItemButton>
 
                     <ListItemButton 
@@ -205,14 +247,17 @@ const handleEditRow = async (params:Task) => {
                             handleEditRow(params.row);
                             pageReload()
                         }}
-                        sx={{borderRadius: '45%'}}    
+                    sx={{borderRadius: '45%'}}
+                    disabled={userRole !== '2' && userRole !== '3'}
                     >
-                        <SaveAsIcon />
+                    <SaveAsIcon />
                     </ListItemButton>
-               </Stack>
-            )
-        },
-    ]
+                </Stack>
+                )}
+                            </Stack>
+                            )
+                        },
+                    ]
 
     //fetching the tasks from the database
     useEffect(() => {
@@ -227,18 +272,23 @@ const handleEditRow = async (params:Task) => {
                       },
                 })
                 const data = await response.json()
-                let current_task_list : Task[]= []
-                 data.tasks.map((elem:Task)=> {
-                    const current_task = {
-                        ID_TASK: elem.ID_TASK,
-                        T_STATUS: elem.T_STATUS,
-                        FINISH_DATE: dayjs(elem.FINISH_DATE).format("MM/DD/YYYY") ,
-                        E_ID: elem.E_ID,
-                        T_NAME: elem.T_NAME
-                    }
-                    current_task_list.push(current_task)
-                })
-                setTasksList(current_task_list) 
+                const current_task_list: Task[] = [];
+                data.tasks.map((elem: Task) => {
+                  const current_task = {
+                    ID_TASK: elem.ID_TASK,
+                    T_STATUS: elem.T_STATUS,
+                    FINISH_DATE: dayjs(elem.FINISH_DATE).format("MM/DD/YYYY"),
+                    E_ID: elem.E_ID,
+                    T_NAME: elem.T_NAME,
+                  };
+                  if (userRole === '1' && elem.E_ID === Number(userId)) {
+                    current_task_list.push(current_task);
+                  } else if (userRole !== '1') {
+                    current_task_list.push(current_task);
+                  }
+                });
+                setTasksList(current_task_list);
+                setFilteredTasksList(current_task_list);
             } catch (error) {
                 console.error(error)
             }
@@ -246,13 +296,15 @@ const handleEditRow = async (params:Task) => {
         }
         const getStatusBarData = async () => {
             try {
-                const response = await fetch('/get-status-tasks', {
+                const pName = project?.TEAM
+                const response = await fetch('/get-status-tasks' + pName , {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
                       },
                 })
                 const data = await response.json()
+                console.log(data.total_tasks)
                 setProgresValue(Math.round((data.finished_tasks * 100) / data.total_tasks)) 
             } catch (error) {
                 console.error(error)
@@ -337,8 +389,9 @@ const handleEditRow = async (params:Task) => {
                            Project status: {progresValue}%
                         </Typography>
                         <LinearProgress variant="determinate" value={progresValue} />
-
-                        {project?.PROJECT_STATUS.toLowerCase() == "not finished" ?
+                    
+                    
+                        {(userRole === '2' || userRole === '3') &&  project?.PROJECT_STATUS.toLowerCase() == "not finished" ?
                             (
                                 <Button 
                                     onClick={() => setFinishProjectDialog(true)}
@@ -347,12 +400,13 @@ const handleEditRow = async (params:Task) => {
                                     Close Project
                                 </Button>
                             ) : (
-                                <Button 
+                               (userRole === '2' || userRole === '3') &&  <Button 
                                     onClick={() => setOpenProjectDialog(true)}
                                     sx={{mt: 2}}
                                 >
                                     Open Project
                                 </Button>
+                               
                             )
                         }
                          {projectStatusError && 
@@ -575,22 +629,22 @@ const handleEditRow = async (params:Task) => {
                             sx={{mb: 3}}
                             alignItems={"flex-end"}
                         >
-                            {project?.PROJECT_STATUS.toLowerCase() === 'not finished' &&
-                            <Button
+                            {(userRole === '2' || userRole === '3')&&project?.PROJECT_STATUS.toLowerCase() === 'not finished' &&(
+                                <Button
                                 onClick={() => setDialog(true)}
-                                sx={{"&.MuiButton-text": { bgcolor: "#2563eb" , color: "white"}}}
-                                variant="text"
-                            >
+                                variant="contained"
+                                color="primary"
+                                sx={{ mt: 2 }}
+                                >
                                 Add Task
-                            </Button>
-                        }
+                                </Button>
+                            )}
                         </Grid>
                         {tasksList.length > 0 &&
                         <DataGrid
-                            rows={tasksList} 
+                            rows={filteredTasksList} 
                             columns={columns}
                             getRowId={(row) => row.ID_TASK} 
-                            
                         />
                         }
 
@@ -700,14 +754,14 @@ const handleEditRow = async (params:Task) => {
                             <DialogContentText
                                 id="alert-dialog-description"
                             >
-                                Are you sure you want to continue?
+                                Are you sure you want to close this project?
                             </DialogContentText>
                         </DialogContent>
                         <DialogActions>
                             <Button
                                 sx={{"&.MuiButton-text": { bgcolor: "red" , color: "white"}}}
                                 variant="text"
-                                onClick={() => setDialog(false)}
+                                onClick={() => setOpenProjectDialog(false)}
                             >
                                 No
                             </Button>
@@ -737,7 +791,7 @@ const handleEditRow = async (params:Task) => {
                             <DialogContentText
                                 id="alert-dialog-description"
                             >
-                                Are you sure you want to continue?
+                                Are you sure you want open this project?
                             </DialogContentText>
                         </DialogContent>
                         <DialogActions>
